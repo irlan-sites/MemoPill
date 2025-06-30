@@ -37,11 +37,22 @@ class Remedio {
 
 class RemediosProvider extends ChangeNotifier {
   final List<Remedio> _remedios = [];
+  bool _isInitialized = false;
 
   List<Remedio> get remedios => List.unmodifiable(_remedios);
 
   RemediosProvider() {
-    _carregarRemedios();
+    _init();
+  }
+  Future<void> _init() async {
+    await _carregarRemedios();
+    _isInitialized = true;
+  }
+
+  Future<void> _ensureInitialized() async {
+    while (!_isInitialized) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
   }
 
   Future<void> _carregarRemedios() async {
@@ -57,6 +68,7 @@ class RemediosProvider extends ChangeNotifier {
   }
 
   Future<bool> adicionarRemedio(Remedio remedio) async {
+    await _ensureInitialized(); // Garante que a inicialização foi concluída
     if (remedio.nome.trim().isEmpty) {
       return false;
     }
@@ -71,6 +83,7 @@ class RemediosProvider extends ChangeNotifier {
   }
 
   Future<void> removerRemedio(Remedio remedio) async {
+    await _ensureInitialized();
     _remedios.removeWhere(
       (r) => r.nome == remedio.nome && r.compartimento == remedio.compartimento,
     );
@@ -80,6 +93,7 @@ class RemediosProvider extends ChangeNotifier {
   }
 
   Future<bool> editarRemedio(Remedio remedioAntigo, Remedio remedioNovo) async {
+    await _ensureInitialized();
     if (remedioNovo.compartimento != remedioAntigo.compartimento &&
         compartimentoOcupado(remedioNovo.compartimento)) {
       return false;
@@ -110,8 +124,8 @@ class RemediosProvider extends ChangeNotifier {
       assetAudioPath: 'assets/alarm.mp3',
       loopAudio: true,
       vibrate: true,
-      notificationTitle: 'Hora do Remédio!',
-      notificationBody: remedio.nome,
+      notificationTitle: 'Hora do Remédio!', // Título da notificação
+      notificationBody: remedio.nome, // Corpo da notificação
       enableNotificationOnKill: true,
     );
     await Alarm.set(alarmSettings: alarmSettings);
