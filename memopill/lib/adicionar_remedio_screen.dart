@@ -308,22 +308,7 @@ class _AdicionarRemedioScreenState extends State<AdicionarRemedioScreen> {
                                 context,
                                 listen: false,
                               );
-                              final sucesso = dataRemedio != null
-                                  ? await provider.adicionarRemedio(
-                                      Remedio(
-                                        nome: nomeRemedio,
-                                        dataHora: DateTime(
-                                          dataRemedio!.year,
-                                          dataRemedio!.month,
-                                          dataRemedio!.day,
-                                          horario.hour,
-                                          horario.minute,
-                                        ),
-                                        compartimento: compartimento,
-                                        fotoPath: _fotoRemedio?.path,
-                                      ),
-                                    )
-                                  : false;
+
                               if (dataRemedio == null) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -333,18 +318,10 @@ class _AdicionarRemedioScreenState extends State<AdicionarRemedioScreen> {
                                     backgroundColor: Colors.red,
                                   ),
                                 );
-                              } else if (sucesso) {
-                                final snackBar = const SnackBar(
-                                  content: Text('Remédio salvo com sucesso!'),
-                                  backgroundColor: Colors.green,
-                                  duration: Duration(seconds: 2),
-                                );
-                                ScaffoldMessenger.of(
-                                  context,
-                                ).showSnackBar(snackBar).closed.then((_) {
-                                  Navigator.of(context).pop();
-                                });
-                              } else if (nomeRemedio.trim().isEmpty) {
+                                return; // Encerra a execução aqui
+                              }
+
+                              if (nomeRemedio.trim().isEmpty) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
@@ -353,6 +330,32 @@ class _AdicionarRemedioScreenState extends State<AdicionarRemedioScreen> {
                                     backgroundColor: Colors.red,
                                   ),
                                 );
+                                return; // Encerra a execução aqui
+                              }
+
+                              final sucesso = await provider.adicionarRemedio(
+                                Remedio(
+                                  nome: nomeRemedio,
+                                  dataHora: DateTime(
+                                    dataRemedio!.year,
+                                    dataRemedio!.month,
+                                    dataRemedio!.day,
+                                    horario.hour,
+                                    horario.minute,
+                                  ),
+                                  compartimento: compartimento,
+                                  fotoPath: _fotoRemedio?.path,
+                                ),
+                              );
+
+                              // O 'mounted' verifica se o widget ainda está na árvore de widgets
+                              if (!mounted) return;
+
+                              if (sucesso) {
+                                // Primeiro fecha a tela atual
+                                Navigator.of(context).pop();
+                                // Opcional: Mostra o SnackBar na tela anterior (se necessário)
+                                // ScaffoldMessenger.of(context).showSnackBar( ... );
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
