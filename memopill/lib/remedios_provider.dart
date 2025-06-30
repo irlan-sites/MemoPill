@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:alarm/alarm.dart';
-import 'dart:io';
 
 class Remedio {
   final String nome;
@@ -11,7 +9,7 @@ class Remedio {
   final String? fotoPath;
 
   // Usa um getter para o ID para garantir consistência.
-  // O ID é derivado do timestamp, então cada remédio tem um ID único para o alarme.
+  // O ID é derivado do timestamp, então cada remédio tem um ID único.
   int get id => dataHora.millisecondsSinceEpoch.remainder(1000000);
 
   Remedio({
@@ -68,37 +66,11 @@ class RemediosProvider extends ChangeNotifier {
     }
     _remedios.add(remedio);
     await _salvarRemedios();
-
-    final alarmSettings = AlarmSettings(
-      id: remedio.id,
-      dateTime: remedio.dataHora,
-      assetAudioPath: 'assets/som_alarme.mp3', // Use um som de alarme real
-      loopAudio: true,
-      vibrate: true,
-      volumeSettings: VolumeSettings.fade(
-        volume: 0.8,
-        fadeDuration: Duration(seconds: 3),
-      ),
-      notificationSettings: NotificationSettings(
-        title: 'MemoPill - Hora do Remédio!',
-        body: 'Está na hora de tomar seu remédio: ${remedio.nome}.',
-        stopButton: 'Tomar',
-      ),
-      androidFullScreenIntent: true,
-      warningNotificationOnKill: Platform.isIOS,
-    );
-
-    await Alarm.set(alarmSettings: alarmSettings);
-    print("Alarme agendado para ${remedio.nome} às ${remedio.dataHora}");
-
     notifyListeners();
     return true;
   }
 
   Future<void> removerRemedio(Remedio remedio) async {
-    await Alarm.stop(remedio.id);
-    print("Alarme ${remedio.id} cancelado.");
-
     _remedios.removeWhere(
       (r) => r.nome == remedio.nome && r.compartimento == remedio.compartimento,
     );
@@ -111,10 +83,6 @@ class RemediosProvider extends ChangeNotifier {
         compartimentoOcupado(remedioNovo.compartimento)) {
       return false;
     }
-
-    await Alarm.stop(remedioAntigo.id);
-    print("Alarme antigo ${remedioAntigo.id} cancelado para edição.");
-
     _remedios.removeWhere(
       (r) =>
           r.nome == remedioAntigo.nome &&
@@ -122,31 +90,6 @@ class RemediosProvider extends ChangeNotifier {
     );
     _remedios.add(remedioNovo);
     await _salvarRemedios();
-
-    final alarmSettings = AlarmSettings(
-      id: remedioNovo.id,
-      dateTime: remedioNovo.dataHora,
-      assetAudioPath: 'assets/som_alarme.mp3', // Use um som de alarme real
-      loopAudio: true,
-      vibrate: true,
-      volumeSettings: VolumeSettings.fade(
-        volume: 0.8,
-        fadeDuration: Duration(seconds: 3),
-      ),
-      notificationSettings: NotificationSettings(
-        title: 'MemoPill - Hora do Remédio!',
-        body: 'Está na hora de tomar seu remédio: ${remedioNovo.nome}.',
-        stopButton: 'Tomar',
-      ),
-      androidFullScreenIntent: true,
-      warningNotificationOnKill: Platform.isIOS,
-    );
-
-    await Alarm.set(alarmSettings: alarmSettings);
-    print(
-      "Novo alarme agendado para ${remedioNovo.nome} às ${remedioNovo.dataHora}",
-    );
-
     notifyListeners();
     return true;
   }

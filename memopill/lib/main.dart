@@ -5,12 +5,9 @@ import 'package:memopill/historico_provider.dart';
 import 'package:memopill/historico_screen.dart';
 import 'package:memopill/adicionar_remedio_screen.dart';
 import 'package:memopill/ver_remedios.dart';
-import 'package:alarm/alarm.dart';
-import 'dart:async';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Alarm.init();
 
   runApp(MemoPillAppWithKey());
 }
@@ -218,22 +215,13 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  late StreamSubscription<AlarmSet> subscription;
-
   @override
   void initState() {
     super.initState();
-    // O ideal é ouvir o stream de alarmes para lidar com o toque do alarme
-    // enquanto o app está aberto.
-    subscription = Alarm.ringing.listen((alarmSettings) {
-      // Aqui você pode, por exemplo, navegar para uma tela de alarme tocando
-      print('Alarme ${alarmSettings.id} está tocando!');
-    });
   }
 
   @override
   void dispose() {
-    subscription.cancel();
     super.dispose();
   }
 
@@ -310,9 +298,7 @@ class _MainScreenState extends State<MainScreen> {
         ],
       ),
       body: Container(
-        color: Theme.of(
-          context,
-        ).colorScheme.background, // Corrige cor de fundo para modo claro/escuro
+        color: Theme.of(context).colorScheme.background,
         child: SafeArea(
           top: false,
           child: Padding(
@@ -327,7 +313,6 @@ class _MainScreenState extends State<MainScreen> {
                   style: Theme.of(context).textTheme.displayLarge,
                 ),
                 const SizedBox(height: 80.0),
-
                 _buildMenuButton(
                   context: context,
                   iconData: Icons.medication_liquid_outlined,

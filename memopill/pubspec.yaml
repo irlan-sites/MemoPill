@@ -37,9 +37,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   provider: ^6.1.5
-  android_alarm_manager_plus: ^3.0.4
   flutter_local_notifications: ^17.1.2
-  alarm: ^5.1.4
 
 dev_dependencies:
   flutter_test:
@@ -62,8 +60,6 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
-  assets:
-    - assets/som_alarme.mp3
 
   # To add assets to your application, add an assets section, like this:
   # assets:
