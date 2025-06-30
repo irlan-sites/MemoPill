@@ -15,7 +15,7 @@
         android:label="memopill"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
-        
+
         <receiver android:name="com.gdelataillade.alarm.alarm.AlarmReceiver" android:exported="true" />
         <receiver
             android:name="com.gdelataillade.alarm.alarm.BootReceiver"
@@ -31,7 +31,7 @@
             android:foregroundServiceType="mediaPlayback">
         </service>
         <service android:name="com.gdelataillade.alarm.services.NotificationOnKillService" />
-        
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -41,7 +41,7 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
-            
+
             <meta-data
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
@@ -55,7 +55,7 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-            
+
     </application>
 
     <queries>

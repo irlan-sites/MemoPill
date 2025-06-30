@@ -5,22 +5,76 @@ import 'package:memopill/historico_provider.dart';
 import 'package:memopill/historico_screen.dart';
 import 'package:memopill/adicionar_remedio_screen.dart';
 import 'package:memopill/ver_remedios.dart';
+import 'package:alarm/alarm.dart';
+import 'package:memopill/alarm_screen.dart';
+import 'dart:async';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  await Alarm.init();
   runApp(MemoPillAppWithKey());
 }
 
-class MemoPillAppWithKey extends StatelessWidget {
+class MemoPillAppWithKey extends StatefulWidget {
+  @override
+  _MemoPillAppWithKeyState createState() => _MemoPillAppWithKeyState();
+}
+
+class _MemoPillAppWithKeyState extends State<MemoPillAppWithKey> {
+  static StreamSubscription? alarmSubscription;
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    alarmSubscription = Alarm.ringStream.stream.listen((alarmSettings) {
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        final remedioProvider = Provider.of<RemediosProvider>(
+          context,
+          listen: false,
+        );
+        final remedio = remedioProvider.getRemedioById(alarmSettings.id);
+
+        if (remedio != null) {
+          final historicoProvider = Provider.of<HistoricoProvider>(
+            context,
+            listen: false,
+          );
+          historicoProvider.adicionarEvento(
+            HistoricoEvento(
+              id: remedio.id,
+              nomeRemedio: remedio.nome,
+              horario: DateTime.now(),
+              status: 'Perdido',
+            ),
+          );
+        }
+      }
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (context) => AlarmScreen(alarmSettings: alarmSettings),
+        ),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    alarmSubscription?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MemoPillApp();
+    return MemoPillApp(navigatorKey: navigatorKey);
   }
 }
 
 class MemoPillApp extends StatefulWidget {
-  const MemoPillApp({super.key});
+  final GlobalKey<NavigatorState> navigatorKey;
+
+  const MemoPillApp({super.key, required this.navigatorKey});
 
   @override
   State<MemoPillApp> createState() => _MemoPillAppState();
@@ -43,6 +97,7 @@ class _MemoPillAppState extends State<MemoPillApp> {
         ChangeNotifierProvider(create: (_) => HistoricoProvider()),
       ],
       child: MaterialApp(
+        navigatorKey: widget.navigatorKey,
         debugShowCheckedModeBanner: false,
         title: 'MemoPill',
         theme: ThemeData(

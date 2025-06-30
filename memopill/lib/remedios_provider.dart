@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:alarm/alarm.dart';
 
 class Remedio {
   final String nome;
@@ -8,8 +9,6 @@ class Remedio {
   final int compartimento;
   final String? fotoPath;
 
-  // Usa um getter para o ID para garantir consistência.
-  // O ID é derivado do timestamp, então cada remédio tem um ID único.
   int get id => dataHora.millisecondsSinceEpoch.remainder(1000000);
 
   Remedio({
@@ -66,6 +65,7 @@ class RemediosProvider extends ChangeNotifier {
     }
     _remedios.add(remedio);
     await _salvarRemedios();
+    await _agendarAlarme(remedio);
     notifyListeners();
     return true;
   }
@@ -75,6 +75,7 @@ class RemediosProvider extends ChangeNotifier {
       (r) => r.nome == remedio.nome && r.compartimento == remedio.compartimento,
     );
     await _salvarRemedios();
+    await Alarm.stop(remedio.id);
     notifyListeners();
   }
 
@@ -90,6 +91,8 @@ class RemediosProvider extends ChangeNotifier {
     );
     _remedios.add(remedioNovo);
     await _salvarRemedios();
+    await Alarm.stop(remedioAntigo.id);
+    await _agendarAlarme(remedioNovo);
     notifyListeners();
     return true;
   }
@@ -98,5 +101,32 @@ class RemediosProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final remediosJson = _remedios.map((e) => jsonEncode(e.toMap())).toList();
     await prefs.setStringList('remedios', remediosJson);
+  }
+
+  Future<void> _agendarAlarme(Remedio remedio) async {
+    final alarmSettings = AlarmSettings(
+      id: remedio.id,
+      dateTime: remedio.dataHora,
+      assetAudioPath: 'assets/alarm.mp3',
+      loopAudio: true,
+      vibrate: true,
+      notificationTitle: 'Hora do Remédio!',
+      notificationBody: remedio.nome,
+      enableNotificationOnKill: true,
+    );
+    await Alarm.set(alarmSettings: alarmSettings);
+
+    // Parar o alarme automaticamente após 1 minuto
+    Future.delayed(const Duration(minutes: 1), () async {
+      await Alarm.stop(remedio.id);
+    });
+  }
+
+  Remedio? getRemedioById(int id) {
+    try {
+      return _remedios.firstWhere((remedio) => remedio.id == id);
+    } catch (e) {
+      return null;
+    }
   }
 }
