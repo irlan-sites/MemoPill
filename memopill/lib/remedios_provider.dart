@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:alarm/alarm.dart';
+import 'package:memopill/historico_provider.dart';
+import 'package:provider/provider.dart';
 
 class Remedio {
   final String nome;
@@ -37,22 +39,13 @@ class Remedio {
 
 class RemediosProvider extends ChangeNotifier {
   final List<Remedio> _remedios = [];
-  bool _isInitialized = false;
+  bool _carregado = false;
+  bool get carregado => _carregado;
 
   List<Remedio> get remedios => List.unmodifiable(_remedios);
 
   RemediosProvider() {
-    _init();
-  }
-  Future<void> _init() async {
-    await _carregarRemedios();
-    _isInitialized = true;
-  }
-
-  Future<void> _ensureInitialized() async {
-    while (!_isInitialized) {
-      await Future.delayed(const Duration(milliseconds: 100));
-    }
+    _carregarRemedios();
   }
 
   Future<void> _carregarRemedios() async {
@@ -60,6 +53,7 @@ class RemediosProvider extends ChangeNotifier {
     final remediosJson = prefs.getStringList('remedios') ?? [];
     _remedios.clear();
     _remedios.addAll(remediosJson.map((e) => Remedio.fromMap(jsonDecode(e))));
+    _carregado = true;
     notifyListeners();
   }
 
@@ -67,8 +61,7 @@ class RemediosProvider extends ChangeNotifier {
     return _remedios.any((r) => r.compartimento == compartimento);
   }
 
-  Future<bool> adicionarRemedio(Remedio remedio) async {
-    await _ensureInitialized(); // Garante que a inicialização foi concluída
+  Future<bool> adicionarRemedio(Remedio remedio, BuildContext context) async {
     if (remedio.nome.trim().isEmpty) {
       return false;
     }
@@ -77,13 +70,12 @@ class RemediosProvider extends ChangeNotifier {
     }
     _remedios.add(remedio);
     await _salvarRemedios();
-    await _agendarAlarme(remedio);
+    await _agendarAlarme(remedio, context: context);
     notifyListeners();
     return true;
   }
 
   Future<void> removerRemedio(Remedio remedio) async {
-    await _ensureInitialized();
     _remedios.removeWhere(
       (r) => r.nome == remedio.nome && r.compartimento == remedio.compartimento,
     );
@@ -93,7 +85,6 @@ class RemediosProvider extends ChangeNotifier {
   }
 
   Future<bool> editarRemedio(Remedio remedioAntigo, Remedio remedioNovo) async {
-    await _ensureInitialized();
     if (remedioNovo.compartimento != remedioAntigo.compartimento &&
         compartimentoOcupado(remedioNovo.compartimento)) {
       return false;
@@ -117,15 +108,36 @@ class RemediosProvider extends ChangeNotifier {
     await prefs.setStringList('remedios', remediosJson);
   }
 
-  Future<void> _agendarAlarme(Remedio remedio) async {
+  Future<void> moverParaHistoricoComoPerdido(
+    Remedio remedio,
+    BuildContext context,
+  ) async {
+    // Adiciona ao histórico como Perdido
+    final historicoProvider = Provider.of<HistoricoProvider>(
+      context,
+      listen: false,
+    );
+    await historicoProvider.adicionarEvento(
+      HistoricoEvento(
+        id: remedio.id,
+        nomeRemedio: remedio.nome,
+        horario: remedio.dataHora,
+        status: 'Perdido',
+      ),
+    );
+    // Remove da lista de remédios ativos
+    await removerRemedio(remedio);
+  }
+
+  Future<void> _agendarAlarme(Remedio remedio, {BuildContext? context}) async {
     final alarmSettings = AlarmSettings(
       id: remedio.id,
       dateTime: remedio.dataHora,
       assetAudioPath: 'assets/alarm.mp3',
       loopAudio: true,
       vibrate: true,
-      notificationTitle: 'Hora do Remédio!', // Título da notificação
-      notificationBody: remedio.nome, // Corpo da notificação
+      notificationTitle: 'Hora do Remédio!',
+      notificationBody: remedio.nome,
       enableNotificationOnKill: true,
     );
     await Alarm.set(alarmSettings: alarmSettings);
@@ -133,6 +145,9 @@ class RemediosProvider extends ChangeNotifier {
     // Parar o alarme automaticamente após 1 minuto
     Future.delayed(const Duration(minutes: 1), () async {
       await Alarm.stop(remedio.id);
+      if (context != null) {
+        await moverParaHistoricoComoPerdido(remedio, context);
+      }
     });
   }
 

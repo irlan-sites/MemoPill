@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:alarm/alarm.dart';
 import 'package:memopill/historico_provider.dart';
+import 'package:memopill/remedios_provider.dart';
 import 'package:provider/provider.dart';
 
 class AlarmScreen extends StatelessWidget {
@@ -29,7 +30,15 @@ class AlarmScreen extends StatelessWidget {
       listen: false,
     );
     await historicoProvider.marcarComoTomado(alarmSettings.id);
-
+    // Remove o remédio da lista ativa ao confirmar
+    final remediosProvider = Provider.of<RemediosProvider>(
+      context,
+      listen: false,
+    );
+    final remedio = remediosProvider.getRemedioById(alarmSettings.id);
+    if (remedio != null) {
+      await remediosProvider.removerRemedio(remedio);
+    }
     if (context.mounted) {
       await Alarm.stop(alarmSettings.id);
       Navigator.pop(context);

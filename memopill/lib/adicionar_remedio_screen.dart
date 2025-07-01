@@ -58,6 +58,7 @@ class _AdicionarRemedioScreenState extends State<AdicionarRemedioScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final colorScheme = Theme.of(context).colorScheme;
+    final provider = Provider.of<RemediosProvider>(context);
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -71,13 +72,13 @@ class _AdicionarRemedioScreenState extends State<AdicionarRemedioScreen> {
           },
         ),
       ),
-      body: SizedBox.expand(
-        child: Container(
-          color: colorScheme.background,
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: SingleChildScrollView(
+      body: Stack(
+        children: [
+          // Conteúdo normal da tela
+          SafeArea(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -346,6 +347,7 @@ class _AdicionarRemedioScreenState extends State<AdicionarRemedioScreen> {
                                   compartimento: compartimento,
                                   fotoPath: _fotoRemedio?.path,
                                 ),
+                                context,
                               );
 
                               // O 'mounted' verifica se o widget ainda está na árvore de widgets
@@ -402,7 +404,13 @@ class _AdicionarRemedioScreenState extends State<AdicionarRemedioScreen> {
               ),
             ),
           ),
-        ),
+          // Loading sobreposto
+          if (!provider.carregado)
+            Container(
+              color: Colors.black.withOpacity(0.3),
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+        ],
       ),
     );
   }

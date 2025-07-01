@@ -1,40 +1,18 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:alarm/alarm.dart';
-import 'package:permission_handler/permission_handler.dart'; // Importe o pacote
 import 'package:memopill/remedios_provider.dart';
 import 'package:memopill/historico_provider.dart';
 import 'package:memopill/historico_screen.dart';
 import 'package:memopill/adicionar_remedio_screen.dart';
 import 'package:memopill/ver_remedios.dart';
+import 'package:alarm/alarm.dart';
 import 'package:memopill/alarm_screen.dart';
-import 'package:memopill/notification_service.dart'; // Importar
+import 'dart:async';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Alarm.init();
-  await NotificationService.initialize();
-  await Permission.notification.request();
-  await Permission.scheduleExactAlarm.request();
-
-  // Inicialize os providers aqui
-  final remediosProvider = RemediosProvider();
-  final historicoProvider = HistoricoProvider();
-
-  // Você pode adicionar um await aqui se o _init retornar um Future
-  // await remediosProvider._init();
-  // (Lembre-se de tornar _init público ou criar um método init público)
-
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: remediosProvider),
-        ChangeNotifierProvider.value(value: historicoProvider),
-      ],
-      child: MemoPillAppWithKey(),
-    ),
-  );
+  runApp(MemoPillAppWithKey());
 }
 
 class MemoPillAppWithKey extends StatefulWidget {
@@ -73,13 +51,6 @@ class _MemoPillAppWithKeyState extends State<MemoPillAppWithKey> {
           );
         }
       }
-      NotificationService.showNotification(
-        id: alarmSettings.id,
-        title: alarmSettings.notificationTitle,
-        body: alarmSettings.notificationBody,
-      );
-
-      // Navegar para a tela do alarme
       navigatorKey.currentState?.push(
         MaterialPageRoute(
           builder: (context) => AlarmScreen(alarmSettings: alarmSettings),
@@ -302,21 +273,6 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    _requestNotificationPermission();
-  }
-
-  Future<void> _requestNotificationPermission() async {
-    final status = await Permission.notification.request();
-    if (status.isDenied) {
-      // Opcional: Mostrar um dialog explicando por que a permissão é necessária
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'A permissão para notificações é recomendada para os alarmes.',
-          ),
-        ),
-      );
-    }
   }
 
   @override
