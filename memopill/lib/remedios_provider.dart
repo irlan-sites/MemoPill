@@ -1,3 +1,5 @@
+// lib/remedios_provider.dart
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -70,7 +72,7 @@ class RemediosProvider extends ChangeNotifier {
     }
     _remedios.add(remedio);
     await _salvarRemedios();
-    await _agendarAlarme(remedio, context: context);
+    await _agendarAlarme(remedio);
     notifyListeners();
     return true;
   }
@@ -129,7 +131,7 @@ class RemediosProvider extends ChangeNotifier {
     await removerRemedio(remedio);
   }
 
-  Future<void> _agendarAlarme(Remedio remedio, {BuildContext? context}) async {
+  Future<void> _agendarAlarme(Remedio remedio) async {
     final alarmSettings = AlarmSettings(
       id: remedio.id,
       dateTime: remedio.dataHora,
@@ -141,14 +143,6 @@ class RemediosProvider extends ChangeNotifier {
       enableNotificationOnKill: true,
     );
     await Alarm.set(alarmSettings: alarmSettings);
-
-    // Parar o alarme automaticamente após 1 minuto
-    /*Future.delayed(const Duration(minutes: 1), () async {
-      await Alarm.stop(remedio.id);
-      if (context != null) {
-        await moverParaHistoricoComoPerdido(remedio, context);
-      }
-    });*/
   }
 
   Remedio? getRemedioById(int id) {

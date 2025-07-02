@@ -1,3 +1,5 @@
+// lib/main.dart
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -16,7 +18,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 /// Manipulador de alarme centralizado que funciona em segundo plano.
 Future<void> handleAlarmRing(AlarmSettings alarmSettings) async {
   final prefs = await SharedPreferences.getInstance();
-  // *** CORREÇÃO IMPORTANTE: Garante que estamos lendo os dados mais recentes do disco. ***
+  // Garante que estamos lendo os dados mais recentes do disco.
   await prefs.reload();
 
   final remediosJson = prefs.getStringList('remedios') ?? [];
@@ -30,19 +32,35 @@ Future<void> handleAlarmRing(AlarmSettings alarmSettings) async {
     remedio = Remedio.fromMap(remedioMap);
   } catch (e) {
     debugPrint("Alarme tocou para remédio não encontrado: ${alarmSettings.id}");
+    // Se o remédio não existe mais, apenas para o alarme para evitar toques futuros.
+    await Alarm.stop(alarmSettings.id);
     return;
   }
 
+  // Cria um evento no histórico com o status 'Perdido' assim que o alarme toca.
+  // Se o usuário confirmar, o status será atualizado para 'Tomado'.
   final evento = HistoricoEvento(
     id: remedio.id,
     nomeRemedio: remedio.nome,
-    horario: DateTime.now(),
+    horario: DateTime.now(), // Usa o horário atual do disparo
     status: 'Perdido',
   );
 
-  historicoJson.insert(0, jsonEncode(evento.toMap()));
-  await prefs.setStringList('historico', historicoJson);
+  // Evita adicionar um evento duplicado de 'Perdido' para o mesmo alarme.
+  final eventoExistente = historicoJson
+      .map((e) => jsonDecode(e))
+      .any(
+        (map) =>
+            HistoricoEvento.fromMap(map).id == evento.id &&
+            HistoricoEvento.fromMap(map).status == 'Perdido',
+      );
 
+  if (!eventoExistente) {
+    historicoJson.insert(0, jsonEncode(evento.toMap()));
+    await prefs.setStringList('historico', historicoJson);
+  }
+
+  // Abre a tela do alarme para o usuário interagir.
   navigatorKey.currentState?.push(
     MaterialPageRoute(
       builder: (context) => AlarmScreen(alarmSettings: alarmSettings),

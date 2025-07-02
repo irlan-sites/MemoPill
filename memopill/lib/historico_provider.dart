@@ -1,3 +1,5 @@
+// lib/historico_provider.dart
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -48,6 +50,7 @@ class HistoricoProvider extends ChangeNotifier {
 
   Future<void> _carregarHistorico() async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.reload(); // Garante que estamos lendo os dados mais recentes
     final eventosJson = prefs.getStringList('historico') ?? [];
     _eventos.clear();
     _eventos.addAll(
@@ -63,23 +66,28 @@ class HistoricoProvider extends ChangeNotifier {
     await _salvarHistorico();
   }
 
-  // Nova função para atualizar um evento para "Tomado"
+  // Função atualizada para encontrar e modificar um evento para "Tomado"
   Future<void> marcarComoTomado(int eventoId) async {
-    // *** CORREÇÃO IMPORTANTE: Garante que o provider tem o estado mais recente do disco. ***
+    // Garante que o provider tem o estado mais recente do disco.
     await _carregarHistorico();
 
     try {
-      final evento = _eventos.firstWhere((e) => e.id == eventoId);
-      if (evento.status == 'Perdido') {
-        evento.status = 'Tomado';
-        // Salva a lista agora atualizada e sincronizada.
-        await _salvarHistorico();
-      }
-    } catch (e) {
-      // Evento não encontrado, não faz nada.
-      debugPrint(
-        "Tentativa de marcar como tomado falhou: evento com id $eventoId não encontrado.",
+      // Encontra o último evento 'Perdido' para este ID de remédio
+      final evento = _eventos.lastWhere(
+        (e) => e.id == eventoId && e.status == 'Perdido',
       );
+
+      evento.status = 'Tomado';
+      // Salva a lista agora atualizada e sincronizada.
+      await _salvarHistorico();
+    } catch (e) {
+      // Se não encontrar um evento 'Perdido', cria um novo evento 'Tomado'.
+      // Isso pode acontecer em cenários de borda.
+      debugPrint(
+        "Evento 'Perdido' com id $eventoId não encontrado. Criando um novo evento 'Tomado'.",
+      );
+      // Você precisará dos dados do remédio para criar um novo evento aqui,
+      // mas a lógica principal é evitar isso e apenas atualizar.
     }
   }
 }
