@@ -143,12 +143,12 @@ class RemediosProvider extends ChangeNotifier {
     await Alarm.set(alarmSettings: alarmSettings);
 
     // Parar o alarme automaticamente após 1 minuto
-    Future.delayed(const Duration(minutes: 1), () async {
+    /*Future.delayed(const Duration(minutes: 1), () async {
       await Alarm.stop(remedio.id);
       if (context != null) {
         await moverParaHistoricoComoPerdido(remedio, context);
       }
-    });
+    });*/
   }
 
   Remedio? getRemedioById(int id) {

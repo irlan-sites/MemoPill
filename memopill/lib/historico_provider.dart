@@ -57,20 +57,29 @@ class HistoricoProvider extends ChangeNotifier {
   }
 
   Future<void> adicionarEvento(HistoricoEvento evento) async {
+    // Garante que a lista está sincronizada antes de adicionar
+    await _carregarHistorico();
     _eventos.insert(0, evento);
     await _salvarHistorico();
   }
 
   // Nova função para atualizar um evento para "Tomado"
   Future<void> marcarComoTomado(int eventoId) async {
+    // *** CORREÇÃO IMPORTANTE: Garante que o provider tem o estado mais recente do disco. ***
+    await _carregarHistorico();
+
     try {
       final evento = _eventos.firstWhere((e) => e.id == eventoId);
       if (evento.status == 'Perdido') {
         evento.status = 'Tomado';
+        // Salva a lista agora atualizada e sincronizada.
         await _salvarHistorico();
       }
     } catch (e) {
-      // Evento não encontrado, não faz nada
+      // Evento não encontrado, não faz nada.
+      debugPrint(
+        "Tentativa de marcar como tomado falhou: evento com id $eventoId não encontrado.",
+      );
     }
   }
 }

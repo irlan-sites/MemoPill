@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:memopill/remedios_provider.dart';
 import 'package:memopill/historico_provider.dart';
 import 'package:memopill/historico_screen.dart';
@@ -7,63 +9,56 @@ import 'package:memopill/adicionar_remedio_screen.dart';
 import 'package:memopill/ver_remedios.dart';
 import 'package:alarm/alarm.dart';
 import 'package:memopill/alarm_screen.dart';
-import 'dart:async';
+
+// Chave global para navegação, agora acessível em todo o aplicativo.
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+/// Manipulador de alarme centralizado que funciona em segundo plano.
+Future<void> handleAlarmRing(AlarmSettings alarmSettings) async {
+  final prefs = await SharedPreferences.getInstance();
+  // *** CORREÇÃO IMPORTANTE: Garante que estamos lendo os dados mais recentes do disco. ***
+  await prefs.reload();
+
+  final remediosJson = prefs.getStringList('remedios') ?? [];
+  final historicoJson = prefs.getStringList('historico') ?? [];
+
+  Remedio? remedio;
+  try {
+    final remedioMap = remediosJson
+        .map((e) => jsonDecode(e))
+        .firstWhere((map) => Remedio.fromMap(map).id == alarmSettings.id);
+    remedio = Remedio.fromMap(remedioMap);
+  } catch (e) {
+    debugPrint("Alarme tocou para remédio não encontrado: ${alarmSettings.id}");
+    return;
+  }
+
+  final evento = HistoricoEvento(
+    id: remedio.id,
+    nomeRemedio: remedio.nome,
+    horario: DateTime.now(),
+    status: 'Perdido',
+  );
+
+  historicoJson.insert(0, jsonEncode(evento.toMap()));
+  await prefs.setStringList('historico', historicoJson);
+
+  navigatorKey.currentState?.push(
+    MaterialPageRoute(
+      builder: (context) => AlarmScreen(alarmSettings: alarmSettings),
+    ),
+  );
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Alarm.init();
-  runApp(MemoPillAppWithKey());
+  Alarm.ringStream.stream.listen(handleAlarmRing);
+  runApp(const MemoPillAppWithKey());
 }
 
-class MemoPillAppWithKey extends StatefulWidget {
-  @override
-  _MemoPillAppWithKeyState createState() => _MemoPillAppWithKeyState();
-}
-
-class _MemoPillAppWithKeyState extends State<MemoPillAppWithKey> {
-  static StreamSubscription? alarmSubscription;
-  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
-  @override
-  void initState() {
-    super.initState();
-    alarmSubscription = Alarm.ringStream.stream.listen((alarmSettings) {
-      final context = navigatorKey.currentContext;
-      if (context != null) {
-        final remedioProvider = Provider.of<RemediosProvider>(
-          context,
-          listen: false,
-        );
-        final remedio = remedioProvider.getRemedioById(alarmSettings.id);
-
-        if (remedio != null) {
-          final historicoProvider = Provider.of<HistoricoProvider>(
-            context,
-            listen: false,
-          );
-          historicoProvider.adicionarEvento(
-            HistoricoEvento(
-              id: remedio.id,
-              nomeRemedio: remedio.nome,
-              horario: DateTime.now(),
-              status: 'Perdido',
-            ),
-          );
-        }
-      }
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(
-          builder: (context) => AlarmScreen(alarmSettings: alarmSettings),
-        ),
-      );
-    });
-  }
-
-  @override
-  void dispose() {
-    alarmSubscription?.cancel();
-    super.dispose();
-  }
+class MemoPillAppWithKey extends StatelessWidget {
+  const MemoPillAppWithKey({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +68,6 @@ class _MemoPillAppWithKeyState extends State<MemoPillAppWithKey> {
 
 class MemoPillApp extends StatefulWidget {
   final GlobalKey<NavigatorState> navigatorKey;
-
   const MemoPillApp({super.key, required this.navigatorKey});
 
   @override
@@ -102,8 +96,8 @@ class _MemoPillAppState extends State<MemoPillApp> {
         title: 'MemoPill',
         theme: ThemeData(
           brightness: Brightness.light,
-          primaryColor: Color(0xFF2196F3),
-          colorScheme: ColorScheme.light(
+          primaryColor: const Color(0xFF2196F3),
+          colorScheme: const ColorScheme.light(
             primary: Color(0xFF2196F3),
             secondary: Color(0xFF1976D2),
             background: Colors.white,
@@ -129,7 +123,7 @@ class _MemoPillAppState extends State<MemoPillApp> {
           ),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF2196F3),
+              backgroundColor: const Color(0xFF2196F3),
               foregroundColor: Colors.white,
               textStyle: const TextStyle(
                 fontWeight: FontWeight.w700,
@@ -175,8 +169,8 @@ class _MemoPillAppState extends State<MemoPillApp> {
         ),
         darkTheme: ThemeData(
           brightness: Brightness.dark,
-          primaryColor: Color(0xFF1976D2),
-          colorScheme: ColorScheme.dark(
+          primaryColor: const Color(0xFF1976D2),
+          colorScheme: const ColorScheme.dark(
             primary: Color(0xFF1976D2),
             secondary: Color(0xFF2196F3),
             background: Color(0xFF181C22),
@@ -187,7 +181,7 @@ class _MemoPillAppState extends State<MemoPillApp> {
             onSurface: Colors.white,
           ),
           fontFamily: 'Roboto',
-          scaffoldBackgroundColor: Color(0xFF181C22),
+          scaffoldBackgroundColor: const Color(0xFF181C22),
           appBarTheme: const AppBarTheme(
             backgroundColor: Color(0xFF23272F),
             elevation: 0,
@@ -202,7 +196,7 @@ class _MemoPillAppState extends State<MemoPillApp> {
           ),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF1976D2),
+              backgroundColor: const Color(0xFF1976D2),
               foregroundColor: Colors.white,
               textStyle: const TextStyle(
                 fontWeight: FontWeight.w700,
@@ -271,16 +265,6 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -318,7 +302,7 @@ class _MainScreenState extends State<MainScreen> {
                             Expanded(
                               child: Text(
                                 widget.darkMode ? 'Modo escuro' : 'Modo claro',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w500,
                                 ),
