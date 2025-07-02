@@ -1,8 +1,11 @@
+// lib/adicionar_remedio_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:provider/provider.dart';
 import 'package:memopill/remedios_provider.dart';
+import 'package:permission_handler/permission_handler.dart'; // 1. Importe o permission_handler
 
 class AdicionarRemedioScreen extends StatefulWidget {
   const AdicionarRemedioScreen({super.key});
@@ -12,6 +15,7 @@ class AdicionarRemedioScreen extends StatefulWidget {
 }
 
 class _AdicionarRemedioScreenState extends State<AdicionarRemedioScreen> {
+  // ... (código existente sem alterações)
   int compartimento = 1;
   TimeOfDay horario = const TimeOfDay(hour: 12, minute: 0);
   File? _fotoRemedio;
@@ -53,7 +57,39 @@ class _AdicionarRemedioScreenState extends State<AdicionarRemedioScreen> {
       });
     }
   }
+  // ... (código existente sem alterações)
 
+  // 2. Adicione a função para checar e solicitar permissões
+  Future<bool> _verificarPermissoes() async {
+    // Solicita permissão para notificações
+    var statusNotificacao = await Permission.notification.request();
+    if (statusNotificacao.isDenied) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Permissão de notificação é necessária para os alarmes.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
+    }
+
+    // Solicita permissão para alarmes exatos
+    if (await Permission.scheduleExactAlarm.request().isDenied) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Permissão de alarme exato é necessária.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  // ... (Widget build e outras funções)
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -305,6 +341,11 @@ class _AdicionarRemedioScreenState extends State<AdicionarRemedioScreen> {
                           const SizedBox(height: 50.0),
                           InkWell(
                             onTap: () async {
+                              // 3. Chame a função de verificação antes de salvar
+                              final permissoesConcedidas =
+                                  await _verificarPermissoes();
+                              if (!permissoesConcedidas) return;
+
                               final provider = Provider.of<RemediosProvider>(
                                 context,
                                 listen: false,
