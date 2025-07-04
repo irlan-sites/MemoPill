@@ -39,7 +39,7 @@ dependencies:
   provider: ^6.1.5
   flutter_local_notifications: ^17.1.2
   alarm: ^3.0.0  # Adicionado
-  permission_handler: ^11.3.1 # Adicione esta linha
+  permission_handler: ^11.3.0 # Adicione esta linha
 
 dev_dependencies:
   flutter_test:

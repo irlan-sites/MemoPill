@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:alarm/alarm.dart';
 import 'package:memopill/historico_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class Remedio {
   final String nome;
@@ -72,7 +73,7 @@ class RemediosProvider extends ChangeNotifier {
     }
     _remedios.add(remedio);
     await _salvarRemedios();
-    await _agendarAlarme(remedio);
+    await _agendarAlarme(remedio, context);
     notifyListeners();
     return true;
   }
@@ -86,7 +87,11 @@ class RemediosProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> editarRemedio(Remedio remedioAntigo, Remedio remedioNovo) async {
+  Future<bool> editarRemedio(
+    Remedio remedioAntigo,
+    Remedio remedioNovo,
+    BuildContext context,
+  ) async {
     if (remedioNovo.compartimento != remedioAntigo.compartimento &&
         compartimentoOcupado(remedioNovo.compartimento)) {
       return false;
@@ -99,7 +104,7 @@ class RemediosProvider extends ChangeNotifier {
     _remedios.add(remedioNovo);
     await _salvarRemedios();
     await Alarm.stop(remedioAntigo.id);
-    await _agendarAlarme(remedioNovo);
+    await _agendarAlarme(remedioNovo, context);
     notifyListeners();
     return true;
   }
@@ -131,16 +136,18 @@ class RemediosProvider extends ChangeNotifier {
     await removerRemedio(remedio);
   }
 
-  Future<void> _agendarAlarme(Remedio remedio) async {
+  Future<void> _agendarAlarme(Remedio remedio, BuildContext context) async {
+    await pedirPermissaoSobreporApps(); // Garante permissão antes de agendar
     final alarmSettings = AlarmSettings(
       id: remedio.id,
       dateTime: remedio.dataHora,
       assetAudioPath: 'assets/alarm.mp3',
       loopAudio: true,
       vibrate: true,
-      notificationTitle: 'Hora do Remédio!',
-      notificationBody: remedio.nome,
+      notificationTitle: '',
+      notificationBody: '',
       enableNotificationOnKill: true,
+      // TODO: Adicionar parâmetro/callback para abrir tela de alarme em tela cheia
     );
     await Alarm.set(alarmSettings: alarmSettings);
   }
@@ -150,6 +157,12 @@ class RemediosProvider extends ChangeNotifier {
       return _remedios.firstWhere((remedio) => remedio.id == id);
     } catch (e) {
       return null;
+    }
+  }
+
+  Future<void> pedirPermissaoSobreporApps() async {
+    if (!await Permission.systemAlertWindow.isGranted) {
+      await Permission.systemAlertWindow.request();
     }
   }
 }
