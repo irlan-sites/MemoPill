@@ -86,6 +86,22 @@ class _AdicionarRemedioScreenState extends State<AdicionarRemedioScreen> {
       return false;
     }
 
+    // Verifica e solicita a permissão para aparecer sobre outros apps
+    if (await Permission.systemAlertWindow.request().isDenied) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Permissão para aparecer sobre outros apps é necessária para exibir o alarme com o app fechado.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      // Opcional: abrir as configurações para o usuário ativar manualmente,
+      // já que o request() pode não abrir a tela em todas as versões do Android.
+      // await openAppSettings();
+      return false;
+    }
+
     return true;
   }
 
